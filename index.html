@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Say It Like the Movies</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1b1b1f;--mute:#6b6b76;--line:#e3e0d8;--acc:#d6322e;--ok:#1f9d55;--bad:#d6322e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121216;--card:#1c1c22;--ink:#f2f1ee;--mute:#9a9aa6;--line:#2c2c35;--acc:#ff5a52;--ok:#3ecf7b;--bad:#ff6b63;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#121216;--card:#1c1c22;--ink:#f2f1ee;--mute:#9a9aa6;--line:#2c2c35;--acc:#ff5a52;--ok:#3ecf7b;--bad:#ff6b63;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif}
+.w{max-width:1000px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:clamp(28px,6vw,46px);margin:8px 0 4px;letter-spacing:-.5px}
+h1 em{color:var(--acc)}
+.sub{color:var(--mute);font-family:system-ui,sans-serif;margin:0 0 18px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:system-ui,sans-serif;margin-bottom:16px}
+input[type=search]{flex:1;min-width:180px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:15px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:99px;cursor:pointer;font-size:14px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.prog{font-family:system-ui,sans-serif;font-size:13px;color:var(--mute);margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;cursor:pointer;display:flex;flex-direction:column;gap:10px;text-align:left;color:var(--ink);font:inherit;position:relative}
+.card:hover{border-color:var(--acc)}
+.card q{font-size:19px;line-height:1.35;quotes:"“" "”"}
+.meta{font-family:system-ui,sans-serif;font-size:13px;color:var(--mute)}
+.tag{font-family:system-ui,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.6px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);align-self:flex-start}
+.done::after{content:"✓";position:absolute;top:12px;right:14px;color:var(--ok);font-weight:700;font-family:system-ui}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 12px 24px;z-index:20}
+.ov.show{display:flex}
+.pan{background:var(--card);border-radius:18px;max-width:640px;width:100%;padding:22px;border:1px solid var(--line)}
+.pan .big{font-size:clamp(24px,5vw,32px);line-height:1.3;margin:6px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;font-family:system-ui,sans-serif}
+button.b,a.b{border:0;background:var(--ink);color:var(--bg);padding:11px 16px;border-radius:10px;font-size:15px;cursor:pointer;text-decoration:none;display:inline-block}
+button.b.r{background:var(--acc);color:#fff}
+button.b.g{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.rec{animation:p 1s infinite}
+@keyframes p{50%{opacity:.6}}
+.res{font-family:system-ui,sans-serif;margin-top:10px}
+.w1{display:inline-block;padding:2px 8px;margin:2px;border-radius:6px;font-size:17px}
+.w1.ok{background:color-mix(in srgb,var(--ok) 22%,transparent)}
+.w1.no{background:color-mix(in srgb,var(--bad) 22%,transparent);text-decoration:line-through}
+.score{font-size:30px;font-weight:700}
+iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px;margin-top:8px}
+.x{float:right;background:none;border:0;font-size:26px;color:var(--mute);cursor:pointer}
+.note{font-size:12px;color:var(--mute);font-family:system-ui,sans-serif}
+</style>
+</head>
+<body>
+<div class="w">
+  <h1>Say it like <em>the movies</em></h1>
+  <p class="sub">Pick a quote, hear it, say it, check your score, then watch the real scene.</p>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Search quote or movie…">
+    <button class="chip on" data-d="all">All</button>
+    <button class="chip" data-d="Easy">Easy</button>
+    <button class="chip" data-d="Medium">Medium</button>
+    <button class="chip" data-d="Hard">Hard</button>
+    <button class="chip" id="add">+ Add your own</button>
+    <span class="prog" id="prog"></span>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="ov" id="ov"><div class="pan" id="pan"></div></div>
+
+<script>
+// vid = YouTube video ID of the scene (optional). Leave "" to show a "Find the clip" link instead.
+const BASE=[
+["May the Force be with you.","Star Wars","1977","Obi-Wan Kenobi",""],
+["I’ll be back.","The Terminator","1984","The Terminator",""],
+["Here’s looking at you, kid.","Casablanca","1942","Rick Blaine",""],
+["You can’t handle the truth!","A Few Good Men","1992","Col. Jessep",""],
+["Life is like a box of chocolates. You never know what you’re gonna get.","Forrest Gump","1994","Forrest Gump",""],
+["I’m the king of the world!","Titanic","1997","Jack Dawson",""],
+["Why so serious?","The Dark Knight","2008","The Joker",""],
+["To infinity and beyond!","Toy Story","1995","Buzz Lightyear",""],
+["Just keep swimming.","Finding Nemo","2003","Dory",""],
+["There’s no place like home.","The Wizard of Oz","1939","Dorothy",""],
+["I see dead people.","The Sixth Sense","1999","Cole Sear",""],
+["Houston, we have a problem.","Apollo 13","1995","Jim Lovell",""],
+["You’re gonna need a bigger boat.","Jaws","1975","Chief Brody",""],
+["Hasta la vista, baby.","Terminator 2","1991","The Terminator",""],
+["No, I am your father.","The Empire Strikes Back","1980","Darth Vader",""],
+["Do. Or do not. There is no try.","The Empire Strikes Back","1980","Yoda",""],
+["I’m gonna make him an offer he can’t refuse.","The Godfather","1972","Vito Corleone",""],
+["Show me the money!","Jerry Maguire","1996","Rod Tidwell",""],
+["I feel the need, the need for speed!","Top Gun","1986","Maverick & Goose",""],
+["Nobody puts Baby in a corner.","Dirty Dancing","1987","Johnny Castle",""],
+["With great power comes great responsibility.","Spider-Man","2002","Uncle Ben",""],
+["Roads? Where we’re going, we don’t need roads.","Back to the Future","1985","Doc Brown",""],
+["I am Iron Man.","Iron Man","2008","Tony Stark",""],
+["Carpe diem. Seize the day, boys.","Dead Poets Society","1989","John Keating",""],
+["Frankly, my dear, I don’t give a damn.","Gone with the Wind","1939","Rhett Butler",""],
+["Toto, I’ve a feeling we’re not in Kansas anymore.","The Wizard of Oz","1939","Dorothy",""],
+["Keep your friends close, but your enemies closer.","The Godfather Part II","1974","Michael Corleone",""],
+["Say hello to my little friend!","Scarface","1983","Tony Montana",""],
+["You talking to me?","Taxi Driver","1976","Travis Bickle",""],
+["E.T. phone home.","E.T. the Extra-Terrestrial","1982","E.T.",""],
+["They may take our lives, but they’ll never take our freedom!","Braveheart","1995","William Wallace",""],
+["Get busy living, or get busy dying.","The Shawshank Redemption","1994","Andy Dufresne",""],
+["Hope is a good thing, maybe the best of things, and no good thing ever dies.","The Shawshank Redemption","1994","Andy Dufresne",""],
+["Fear is the path to the dark side. Fear leads to anger. Anger leads to hate. Hate leads to suffering.","Star Wars: The Phantom Menace","1999","Yoda",""],
+["You shall not pass!","The Fellowship of the Ring","2001","Gandalf",""],
+["Why do we fall? So we can learn to pick ourselves up.","Batman Begins","2005","Thomas Wayne",""],
+["I’ll have what she’s having.","When Harry Met Sally","1989","Customer",""],
+["Just when I thought I was out, they pull me back in.","The Godfather Part III","1990","Michael Corleone",""],
+["I am Groot.","Guardians of the Galaxy","2014","Groot",""],
+["I’m just a girl, standing in front of a boy, asking him to love her.","Notting Hill","1999","Anna Scott",""]
+];
+const mk=(text,movie,year,who,vid)=>{const n=text.split(/\s+/).length;return{text,movie,year,who,vid,lvl:n<=5?"Easy":n<=9?"Medium":"Hard"}};
+let CUSTOM=[];try{CUSTOM=JSON.parse(localStorage.getItem("mq_custom")||"[]")}catch(e){}
+const DATA=BASE.map(a=>mk(...a)).concat(CUSTOM.map(t=>mk(t,"My own","","You","")));
+
+let lvl="all",term="",done=new Set(),cur=null,rec=null,view=[];
+try{done=new Set(JSON.parse(localStorage.getItem("mq_done")||"[]"))}catch(e){}
+const $=s=>document.querySelector(s);
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>s.toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9'\s]/g," ").split(/\s+/).filter(Boolean);
+
+function render(){
+  const list=DATA.map((d,i)=>({...d,i})).filter(d=>(lvl==="all"||d.lvl===lvl)&&(d.text+d.movie).toLowerCase().includes(term));
+  view=list.map(d=>d.i);
+  $("#grid").innerHTML=list.map(d=>`<button class="card ${done.has(d.i)?"done":""}" data-i="${d.i}"><q>${esc(d.text)}</q><div class="meta">${esc(d.movie)} ${d.year?"("+d.year+")":""} · ${esc(d.who)}</div><span class="tag">${d.lvl}</span></button>`).join("")||'<p class="meta">No quotes found.</p>';
+  $("#prog").textContent=`Practiced ${done.size} / ${DATA.length}`;
+}
+document.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{document.querySelectorAll(".chip").forEach(x=>x.classList.remove("on"));c.classList.add("on");lvl=c.dataset.d;render()});
+$("#q").oninput=e=>{term=e.target.value.toLowerCase();render()};
+$("#grid").onclick=e=>{const c=e.target.closest(".card");if(c)open(+c.dataset.i)};
+
+function open(i){
+  cur=DATA[i];cur.idx=i;
+  const search="https://www.youtube.com/results?search_query="+encodeURIComponent(`"${cur.text}" ${cur.movie==="My own"?"":cur.movie+" movie scene"}`);
+  $("#pan").innerHTML=`<button class="x" id="cl" aria-label="Close">×</button>
+  <span class="tag">${cur.lvl}</span>
+  <div class="big">“${esc(cur.text)}”</div>
+  <div class="meta">${esc(cur.movie)} ${cur.year?"("+cur.year+")":""} · ${esc(cur.who)}</div>
+  <div class="row">
+    <button class="b g" id="hear">🔊 Listen</button>
+    <button class="b g" id="slow">🐢 Slow</button>
+    <button class="b r" id="mic">🎤 Say it</button>
+  </div>
+  <div class="res" id="res"><span class="note">Tap “Say it”, then speak the line. Works best in Chrome or Edge.</span></div>
+  <div class="row"><a class="b" href="${search}" target="_blank" rel="noopener">▶ Find the movie clip</a><button class="b g" id="ok">✓ Mark practiced</button></div>
+  <div class="row"><button class="b g" id="pv">← Prev</button><button class="b g" id="nx">Next →</button></div>
+  ${cur.vid?`<iframe src="https://www.youtube-nocookie.com/embed/${cur.vid}" allowfullscreen loading="lazy" title="Movie clip"></iframe>`:""}`;
+  $("#ov").classList.add("show");
+  $("#cl").onclick=close;
+  $("#hear").onclick=()=>speak(1);
+  $("#slow").onclick=()=>speak(.6);
+  $("#mic").onclick=listen;
+  const p=view.indexOf(i);$("#pv").onclick=()=>{if(p>0)open(view[p-1])};$("#nx").onclick=()=>{if(p<view.length-1)open(view[p+1])};
+  $("#ok").onclick=()=>{done.add(cur.idx);try{localStorage.setItem("mq_done",JSON.stringify([...done]))}catch(e){}render();$("#ok").textContent="✓ Done!"};
+}
+function close(){$("#ov").classList.remove("show");speechSynthesis&&speechSynthesis.cancel();if(rec)try{rec.stop()}catch(e){}}
+$("#ov").onclick=e=>{if(e.target.id==="ov")close()};
+
+function speak(rate){
+  if(!window.speechSynthesis)return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(cur.text);u.lang="en-US";u.rate=rate;speechSynthesis.speak(u);
+}
+function listen(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const res=$("#res"),mic=$("#mic");
+  if(!SR){fallback("Speech recognition isn’t supported in this browser. Use Chrome or Edge, or type what you said.");return}
+  try{if(document.permissionsPolicy&&!document.permissionsPolicy.allowsFeature("microphone")){fallback("The microphone is blocked inside this preview. Open the page in its own browser tab, or type what you said.");return}}catch(e){}
+  rec=new SR();rec.lang="en-US";rec.interimResults=false;rec.maxAlternatives=3;
+  mic.classList.add("rec");mic.textContent="Listening…";
+  rec.onresult=e=>{
+    const alts=[...e.results[0]].map(a=>a.transcript);
+    let best=null;
+    alts.forEach(t=>{const s=score(t);if(!best||s.pct>best.pct)best=s});
+    show(best,alts[0]);
+  };
+  rec.onerror=e=>{const m={"not-allowed":"Microphone is blocked. Allow mic access, or open the page in its own browser tab.","service-not-allowed":"Microphone is blocked here. Open the page in its own browser tab.","no-speech":"I didn’t hear anything. Try again, closer to the mic.","audio-capture":"No microphone found.","network":"Speech service needs an internet connection."};fallback(m[e.error]||"Couldn’t hear you ("+e.error+").")};
+  rec.onend=()=>{mic.classList.remove("rec");mic.textContent="🎤 Say it"};
+  try{rec.start()}catch(e){fallback("Couldn’t start the microphone. Type what you said instead.")}
+}
+function fallback(msg){
+  $("#res").innerHTML=`<div class="note">${msg}</div><div class="row"><input type="search" id="typed" placeholder="Type what you said…"><button class="b" id="chk">Check</button></div>`;
+  $("#chk").onclick=()=>{const v=$("#typed").value.trim();if(v)show(score(v),v)};
+}
+function score(heard){
+  const target=norm(cur.text),h=norm(heard);
+  // LCS to mark which target words were said in order
+  const m=target.length,n=h.length,L=Array.from({length:m+1},()=>Array(n+1).fill(0));
+  for(let i=m-1;i>=0;i--)for(let j=n-1;j>=0;j--)L[i][j]=target[i]===h[j]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  const hit=Array(m).fill(false);let i=0,j=0;
+  while(i<m&&j<n){if(target[i]===h[j]){hit[i]=true;i++;j++}else if(L[i+1][j]>=L[i][j+1])i++;else j++}
+  return{target,hit,pct:Math.round(100*L[0][0]/m)};
+}
+function show(s,heard){
+  const msg=s.pct>=90?"Perfect! 🎬":s.pct>=60?"Nice, almost there.":"Keep trying, listen again.";
+  $("#res").innerHTML=`<div class="score">${s.pct}%</div><div>${msg}</div><div style="margin:8px 0">${s.target.map((w,i)=>`<span class="w1 ${s.hit[i]?"ok":"no"}">${esc(w)}</span>`).join("")}</div><div class="note">Heard: “${esc(heard)}”</div>`;
+}
+$("#add").onclick=()=>{
+  $("#pan").innerHTML=`<button class="x" id="cl" aria-label="Close">×</button><h2 style="margin:0 0 6px">Add your own sentences</h2><p class="note">One sentence per line. Paste dialogue, speech lines, anything you want to practice.</p><textarea id="ta" rows="8" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:16px Georgia,serif"></textarea><div class="row"><button class="b r" id="sv">Save sentences</button></div>`;
+  $("#ov").classList.add("show");$("#cl").onclick=close;
+  $("#sv").onclick=()=>{const L=$("#ta").value.split("\n").map(s=>s.trim()).filter(Boolean);if(!L.length)return;CUSTOM=CUSTOM.concat(L);try{localStorage.setItem("mq_custom",JSON.stringify(CUSTOM))}catch(e){}L.forEach(t=>DATA.push(mk(t,"My own","","You","")));render();close()};
+};
+render();
+</script>
+</body>
+</html>
